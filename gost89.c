@@ -472,6 +472,10 @@ void magma_key(gost_ctx * c, const byte * k)
     }
 }
 
+void magma_master_key(gost_ctx *c, const byte *k) {
+    memcpy(c->master_key, k, sizeof(c->master_key));
+}
+
 /* Retrieve 256-bit gost89 key from context */
 void gost_get_key(gost_ctx * c, byte * k)
 {
@@ -496,6 +500,7 @@ void magma_get_key(gost_ctx * c, byte * k)
     }
 }
 
+
 /* Initalize context. Provides default value for subst_block */
 void gost_init(gost_ctx * c, const gost_subst_block * b)
 {
@@ -508,6 +513,7 @@ void gost_init(gost_ctx * c, const gost_subst_block * b)
 /* Cleans up key from context */
 void gost_destroy(gost_ctx * c)
 {
+    OPENSSL_cleanse(c->master_key, sizeof(c->master_key));
     OPENSSL_cleanse(c->key, sizeof(c->key));
     OPENSSL_cleanse(c->mask, sizeof(c->mask));
 }

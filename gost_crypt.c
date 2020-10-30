@@ -456,8 +456,10 @@ static int magma_cipher_init(EVP_CIPHER_CTX *ctx, const unsigned char *key,
         }
     }
 
-    if (key)
+    if (key) {
         magma_key(&(c->cctx), key);
+        magma_master_key(&(c->cctx), key);
+    }
     if (iv) {
         memcpy((unsigned char *)EVP_CIPHER_CTX_original_iv(ctx), iv,
                EVP_CIPHER_CTX_iv_length(ctx));
@@ -975,6 +977,66 @@ static int magma_cipher_ctl(EVP_CIPHER_CTX *ctx, int type, int arg, void *ptr)
             c->key_meshing = arg;
             return 1;
         }
+#ifdef EVP_CTRL_TLSTREE
+    case EVP_CTRL_TLSTREE:
+        {
+            unsigned char newkey[32];
+            int mode = EVP_CIPHER_CTX_mode(ctx);
+            static const unsigned char zeroseq[8];
+            struct ossl_gost_cipher_ctx *ctr_ctx = NULL;
+            gost_ctx *c = NULL;
+
+            unsigned char adjusted_iv[8];
+            unsigned char seq[8];
+            int j, carry;
+            if (mode != EVP_CIPH_CTR_MODE)
+                return -1;
+
+            ctr_ctx = (struct ossl_gost_cipher_ctx *)EVP_CIPHER_CTX_get_cipher_data(ctx);
+            c = &(ctr_ctx->cctx);
+
+            memcpy(seq, ptr, 8);
+            if (EVP_CIPHER_CTX_encrypting(ctx))
+            {
+                /*
+             * OpenSSL increments seq after mac calculation.
+             * As we have Mac-Then-Encrypt, we need decrement it here on encryption
+             * to derive the key correctly.
+             * */
+                if (memcmp(seq, zeroseq, 8) != 0)
+                {
+                    for (j = 7; j >= 0; j--)
+                    {
+                        if (seq[j] != 0)
+                        {
+                            seq[j]--;
+                            break;
+                        }
+                        else
+                            seq[j] = 0xFF;
+                    }
+                }
+            }
+
+            if (gost_tlstree(NID_magma_cbc, c->master_key, newkey,
+                             (const unsigned char *)seq) > 0) {
+                memset(adjusted_iv, 0, 8);
+                memcpy(adjusted_iv, EVP_CIPHER_CTX_original_iv(ctx), 4);
+                for (j = 3, carry = 0; j >= 0; j--)
+                {
+                    int adj_byte = adjusted_iv[j] + seq[j+4] + carry;
+                    carry = (adj_byte > 255) ? 1 : 0;
+                    adjusted_iv[j] = adj_byte & 0xFF;
+                }
+                EVP_CIPHER_CTX_set_num(ctx, 0);
+                memcpy(EVP_CIPHER_CTX_iv_noconst(ctx), adjusted_iv, 8);
+
+                magma_key(c, newkey);
+                return 1;
+          }
+        }
+        return -1;
+#endif
     default:
         GOSTerr(GOST_F_MAGMA_CIPHER_CTL, GOST_R_UNSUPPORTED_CIPHER_CTL_COMMAND);
         return -1;

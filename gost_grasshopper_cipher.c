@@ -821,8 +821,8 @@ static int gost_grasshopper_cipher_ctl(EVP_CIPHER_CTX *ctx, int type, int arg, v
             c->section_size = arg;
             break;
         }
-#ifdef EVP_CTRL_TLS1_2_TLSTREE
-    case EVP_CTRL_TLS1_2_TLSTREE:
+#ifdef EVP_CTRL_TLSTREE
+    case EVP_CTRL_TLSTREE:
         {
           unsigned char newkey[32];
           int mode = EVP_CIPHER_CTX_mode(ctx);
