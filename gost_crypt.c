@@ -950,6 +950,27 @@ static int gost_cipher_ctl(EVP_CIPHER_CTX *ctx, int type, int arg, void *ptr)
     return 1;
 }
 
+/* Decrement 8-byte sequence if needed */
+int decrement_sequence(unsigned char *seq, int decrement) {
+    if (decrement < 0 || decrement > 1)
+        return 0; 
+    
+    int j;
+    if (decrement) {
+       for (j = 7; j >= 0; j--)
+            {
+                if (seq[j] != 0)
+                {
+                    seq[j]--;
+                    break;
+                }
+                else
+                    seq[j] = 0xFF;
+            }
+    }
+    return 1;
+}
+
 /* Control function for gost cipher */
 static int magma_cipher_ctl(EVP_CIPHER_CTX *ctx, int type, int arg, void *ptr)
 {
@@ -977,48 +998,37 @@ static int magma_cipher_ctl(EVP_CIPHER_CTX *ctx, int type, int arg, void *ptr)
             c->key_meshing = arg;
             return 1;
         }
-#ifdef EVP_CTRL_TLSTREE
     case EVP_CTRL_TLSTREE:
         {
             unsigned char newkey[32];
             int mode = EVP_CIPHER_CTX_mode(ctx);
-            static const unsigned char zeroseq[8];
             struct ossl_gost_cipher_ctx *ctr_ctx = NULL;
             gost_ctx *c = NULL;
 
             unsigned char adjusted_iv[8];
             unsigned char seq[8];
-            int j, carry;
+            int j, carry, decrement_arg;
             if (mode != EVP_CIPH_CTR_MODE)
                 return -1;
 
             ctr_ctx = (struct ossl_gost_cipher_ctx *)EVP_CIPHER_CTX_get_cipher_data(ctx);
             c = &(ctr_ctx->cctx);
 
+            /*
+             * 'arg' parameter indicates what we should do with sequence value.
+             * 
+             * When function called, seq is incremented after MAC calculation.
+             * In ETM mode, we use seq 'as is' in the ctrl-function (arg = 0)
+             * Otherwise we have to decrease it in the implementation (arg = 1).
+             */
             memcpy(seq, ptr, 8);
-            if (EVP_CIPHER_CTX_encrypting(ctx))
-            {
-                /*
-             * OpenSSL increments seq after mac calculation.
-             * As we have Mac-Then-Encrypt, we need decrement it here on encryption
-             * to derive the key correctly.
-             * */
-                if (memcmp(seq, zeroseq, 8) != 0)
-                {
-                    for (j = 7; j >= 0; j--)
-                    {
-                        if (seq[j] != 0)
-                        {
-                            seq[j]--;
-                            break;
-                        }
-                        else
-                            seq[j] = 0xFF;
-                    }
-                }
+            decrement_arg = arg;
+            if(!decrement_sequence(seq, decrement_arg)) {
+                GOSTerr(GOST_F_MAGMA_CIPHER_CTL, GOST_R_CTRL_CALL_FAILED);
+                return -1;
             }
 
-            if (gost_tlstree(NID_magma_cbc, c->master_key, newkey,
+            if (gost_tlstree(NID_magma_cbc, (const unsigned char *)c->master_key, newkey,
                              (const unsigned char *)seq) > 0) {
                 memset(adjusted_iv, 0, 8);
                 memcpy(adjusted_iv, EVP_CIPHER_CTX_original_iv(ctx), 4);
@@ -1036,7 +1046,6 @@ static int magma_cipher_ctl(EVP_CIPHER_CTX *ctx, int type, int arg, void *ptr)
           }
         }
         return -1;
-#endif
     default:
         GOSTerr(GOST_F_MAGMA_CIPHER_CTL, GOST_R_UNSUPPORTED_CIPHER_CTL_COMMAND);
         return -1;
