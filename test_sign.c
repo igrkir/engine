@@ -168,7 +168,6 @@ static int test_sign(struct test_sign *t)
     print_test_result(!err);
     ret |= err;
     EVP_PKEY_free(pkey);
-#endif
 
     /* Convert to DER and back, using OSSL_STORE API. */
     T(BIO_reset(bp));
@@ -199,6 +198,7 @@ static int test_sign(struct test_sign *t)
     } else
 	printf(cCYAN "skipped\n" cNORM);
     BIO_free(bp);
+#endif
 
     /* Convert to DER and back, using memory API. */
     unsigned char *kptr = NULL;
