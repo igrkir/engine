@@ -500,7 +500,6 @@ void magma_get_key(gost_ctx * c, byte * k)
     }
 }
 
-
 /* Initalize context. Provides default value for subst_block */
 void gost_init(gost_ctx * c, const gost_subst_block * b)
 {
