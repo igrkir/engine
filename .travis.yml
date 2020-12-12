@@ -16,8 +16,6 @@ matrix:
     - name: gcc | openssl-stable
     - name: clang | openssl-stable
       compiler: clang
-    - name: gcc | openssl-master
-      env: OPENSSL_BRANCH=master
     # Dynamic and static analysers
     - name: gcc+ASan | openssl-stable
       env: ASAN=-DASAN=1
