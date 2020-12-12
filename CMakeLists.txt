@@ -12,7 +12,7 @@ find_package(OpenSSL 1.1.1 REQUIRED)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
- add_compile_options(-O2 -Werror -Wall -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -ggdb -Qunused-arguments -Wno-deprecated-declarations)
+ add_compile_options(-O2 -Werror -Wall -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -ggdb -Qunused-arguments -Wno-deprecated-declarations -Wno-incompatible-pointer-types)
 elseif(CMAKE_C_COMPILER_ID MATCHES "GNU")
 add_compile_options(-O2 -Werror -Wall -Wno-discarded-qualifiers -Wno-incompatible-pointer-types -Wno-unused-parameter -Wno-unused-function -Wno-missing-braces -ggdb -Wno-error=unknown-pragmas -Wno-deprecated-declarations)
 elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
