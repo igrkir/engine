@@ -8,7 +8,7 @@ env:
   global:
     - PREFIX=${HOME}/opt
     - PATH=${PREFIX}/bin:${PATH}
-    - OPENSSL_BRANCH=openssl-3.0.0-alpha6
+    - OPENSSL_BRANCH=OpenSSL_1_1_1g
     - RPATH="-Wl,-rpath=${PREFIX}/lib"
 
 matrix:
@@ -53,6 +53,7 @@ before_script:
   - if [ "$APT_INSTALL" ]; then sudo apt-get install -y $APT_INSTALL; fi
   - git clone --depth 1 -b ${OPENSSL_BRANCH} https://github.com/openssl/openssl.git
   - cd openssl
+  - patch -p0 < ../patches/openssl_111g.diff
   - git describe --always --long
   - $SETARCH ./config shared -d --prefix=${PREFIX} --openssldir=${PREFIX} ${RPATH}
   - travis_wait $SETARCH make -s -j$(nproc) build_libs
