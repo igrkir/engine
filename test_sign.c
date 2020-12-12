@@ -197,8 +197,9 @@ static int test_sign(struct test_sign *t)
 	EVP_PKEY_free(pkey);
     } else
 	printf(cCYAN "skipped\n" cNORM);
-    BIO_free(bp);
 #endif
+
+    BIO_free(bp);
 
     /* Convert to DER and back, using memory API. */
     unsigned char *kptr = NULL;
