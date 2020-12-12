@@ -980,8 +980,10 @@ static int test_cert(struct test_cert *tc)
     printf("  d2i_X509_PUBKEY_bio\t\t");
     print_test_result(!err);
     ret |= err;
-    BIO_free(bp);
 #endif
+
+    BIO_free(bp);
+
     /*
      * Verify
      */
